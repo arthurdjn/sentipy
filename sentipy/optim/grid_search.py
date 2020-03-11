@@ -30,11 +30,7 @@ if __name__ == "__main__":
     lr_range = np.linspace(0.001, 0.3, 20)
     window_depth = [1, 2, 3]
     window_dimensions = [2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # epochs_range = np.arange(2, 3, 100).tolist()
-    # batch_range = [64]
-    # lr_range = np.linspace(0.1, 0.2, 1)
-    # window_depth = [3]
-    # window_dimensions = [3, 4, 5]
+
     window_sizes = [list(combination) for depth in window_depth 
                     for combination in list(combinations(window_dimensions, depth))]    
     activation_functions = [F.relu, F.elu, F.leaky_relu, F.tanh]

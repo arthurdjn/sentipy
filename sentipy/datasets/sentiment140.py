@@ -8,9 +8,9 @@ import torch
 from torchtext import data
 
 
-class SSB(data.Dataset):
+class Sentiment140(data.Dataset):
     """
-    Stanford Sentiment Binary dataset.
+    Twitter Sentiment140 dataset.
 
     Reads in the train and dev sets of the dataset.
     Preprocesses fields where necessary.
@@ -19,9 +19,8 @@ class SSB(data.Dataset):
     """
     
 
-    urls = ['https://github.com/arthurdjn/sentipy/raw/master/data/stanford_sentiment_binary_train.tsv.gz',
-            'https://github.com/arthurdjn/sentipy/raw/master/data/stanford_sentiment_binary_dev.tsv.gz']
-    name = 'ssb'
+    urls = ["http://cs.stanford.edu/people/alecmgo/trainingandtestdata.zip"]
+    name = 's140'
     dirname = ''
     
     
@@ -31,34 +30,53 @@ class SSB(data.Dataset):
         return len(data.text)
 
 
-    def __init__(self, path, text_field, label_field, lemmatized_field = data.RawField(), **kwargs):
+    def __init__(self, path, text_field, label_field, 
+                 keepneutral = False, neutral = None,
+                 size = None, shuffle = True, **kwargs):
         
         # Get the Standford dataset fields
         SENT_ID = data.RawField()
-        PHRASE_ID = data.RawField()
-        
-        fields = [("sent_id", SENT_ID),
-                  ("phrase_id", PHRASE_ID),
-                  ("label", label_field),
-                  ("text", text_field),
-                  ("text_pos", lemmatized_field)]
+        DATE = data.RawField()
+        QUERY = data.RawField()
+        USER = data.RawField()
+        fields = [("label", label_field),
+                  ("id", SENT_ID),
+                  ("date", DATE),
+                  ("query", QUERY),
+                  ("user", USER),
+                  ("text", text_field)]
 
         # Create the torchtext dataset for all examples
         examples = []
-        for n, entry in pd.read_table(path).iterrows():
+        df = pd.read_csv(path, encoding='latin-1', header=0,
+                    names=["label", "id", "date", "query", "user", "text"])
+                
+        if shuffle:
+            df = df.sample(frac=1)
+            
+        if neutral is not None:
+            df_neutral = pd.read_csv(neutral, index_col=0, header=None).T
+            df_neutral.columns = ["text"]
+            df_neutral["label"] = [2] * len(df_neutral)
+            df = pd.concat([df_neutral, df])
+            
+        for (_, entry) in df.iloc[0:size].iterrows():
+            if not keepneutral and entry["label"] == 2:
+                continue
             example = data.Example.fromlist(entry, fields)
             examples.append(example)
-                    
-        super(SSB, self).__init__(examples, fields, **kwargs)
-                                
+                        
+        super(Sentiment140, self).__init__(examples, fields, **kwargs)
+                                        
         
     # -------------------------------------------------------------------------
     # Class Methods
    
     @classmethod
     def splits(cls, text_field, label_field, root='.data',
-               train='stanford_sentiment_binary_train.tsv.gz', 
-               test='stanford_sentiment_binary_dev.tsv.gz', **kwargs):
+               train='training.1600000.processed.noemoticon.csv', 
+               test='testdata.manual.2009.06.14.csv', 
+               neutral = None, **kwargs):
         """
         Split SSB dataset in training and testing parts.
 
@@ -73,10 +91,10 @@ class SSB(data.Dataset):
             The default is 'data'.
         train : str, optional
             The file's name that contains the training examples. 
-            The default is 'stanford_sentiment_binary_train.tsv.gz'.
+            The default is 'training.1600000.processed.noemoticon.csv'.
         test : str, optional
             The file's name that contains the test examples.
-            The default is 'stanford_sentiment_binary_dev.tsv.gz'.
+            The default is 'testdata.manual.2009.06.14.csv'.
         **kwargs : Remaining keyword arguments
             Passed to the splits method of Dataset.
 
@@ -96,18 +114,19 @@ class SSB(data.Dataset):
         
         if not os.path.exists(path_train) or not os.path.exists(path_test):
             path = cls.download(root)
-            path_train = path + os.sep + train
-            path_test = path + os.sep + test
+            path_train = path + train
+            path_test = path + test
         
-        train_dataset = SSB(path_train, text_field, label_field, **kwargs)
-        test_dataset = SSB(path_test, text_field, label_field, **kwargs)
+        train_dataset = Sentiment140(path_train, text_field, label_field, neutral=neutral, **kwargs)
+        test_dataset = Sentiment140(path_test, text_field, label_field, **kwargs)
+        
         return train_dataset, test_dataset
         
 
     @classmethod
     def iters(cls, batch_size=32, device=0, root='.data', vectors=None, **kwargs):
         """
-        Create iterator objects for splits of the SSB dataset.
+        Create iterator objects for splits of the Sentiment140 dataset.
 
         Parameters
         ----------

@@ -7,22 +7,20 @@
 This module contains usefull functions used for Data class.
 """
 
+
 import torch
+import time
 
 
-def tokenizer(sample):
-    new_sample = []
-    for word in sample.split():
-        splits = word.split("-")
-        for split in splits[:-1]:
-            new_sample.append(split)
-            new_sample.append("-")
-        new_sample.append(splits[-1])
-    return new_sample
+def get_time(start_time, end_time):
+    elapsed_time = end_time - start_time
+    elapsed_mins = int(elapsed_time / 60)
+    elapsed_secs = int(elapsed_time - (elapsed_mins * 60))
+    
+    return elapsed_mins, elapsed_secs
 
 
-
-def to_one_hot(batched_tensor, num_class):
+def one_hot(batched_tensor, num_class):
     """
     Convert a 1D batched tensor to one hot encoded tensors.
 

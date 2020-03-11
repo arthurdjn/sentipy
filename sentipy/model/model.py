@@ -35,8 +35,20 @@ class CNN(nn.Module):
         
         # Initialize the model
         super().__init__()
+        
+        # Dimension shortcut
+        self.embedding_dim = embedding_dim
+        self.n_filters = n_filters
+        self.filter_sizes = filter_sizes
+        self.output_dim = output_dim
+        
         # Embedding layer
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
+        
+        self.lstm = nn.LSTM(input_size=embedding_dim,
+                            hidden_size=embedding_dim,       
+                            num_layers=1)
+                        
         # List of 2D convolutional layers
         self.convs = nn.ModuleList([
                                     nn.Conv2d(in_channels = 1, 
@@ -72,7 +84,10 @@ class CNN(nn.Module):
         
         embedded = self.embedding(text)  
         # embedded shape: (batch_size, sent len, emb dim)
-        
+
+        # embedded, _ = self.lstm(embedded)
+        # new embedded shape: (batch_size, sent len, emb dim)
+                
         embedded = embedded.unsqueeze(1)
         # embedded shape: (batch_size, 1, sent len, emb dim)
         conved = [self.activation_layer(conv(embedded)).squeeze(3) for conv in self.convs]
@@ -87,8 +102,40 @@ class CNN(nn.Module):
         linear = self.linear(cat)
         # linear shape: (number_filters * n_filters, output_dim)
         
-        predictions = self.activation_output(linear, dim = 1)
+        predictions = self.activation_output(linear)
         # predictions shape: (number_filters * n_filters, output_dim)
 
         return predictions
+    
+    
+    def predict(self, predictions, thresholds = (0.7, 0.7)):
+        
+        thresholds = torch.tensor(thresholds)
+        y_tilde = torch.argmax(predictions, dim=1)
+        y_tilde_multiclass = torch.where(torch.max(predictions, dim=1).values > thresholds[y_tilde],
+                                         y_tilde,
+                                         torch.zeros_like(y_tilde) + 2)
+        
+        return y_tilde_multiclass
+            
+    
+    
+    
+    
+    
+    
+    # def weights_init(self, TEXT):
+    #     pretrained_embeddings = TEXT.vocab.vectors
+    #     self.embedding.weight.data.copy_(pretrained_embeddings)
+        
+    #     # Convert unknown token to zeros tensors
+    #     UNK_IDX = TEXT.vocab.stoi[TEXT.unk_token]
+    #     PAD_IDX = TEXT.vocab.stoi[TEXT.pad_token] 
+    #     self.embedding.weight.data[UNK_IDX] = torch.zeros(self.embedding_dim)
+    #     self.embedding.weight.data[PAD_IDX] = torch.zeros(self.embedding_dim)
+    
+    
+    
+    
+    
 
