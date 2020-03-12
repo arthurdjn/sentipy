@@ -1,2 +1,2 @@
 # sentipy
-RNN &amp; LSTM &amp; CNN models for Sentiment Analysis from Standford University dataset.
+RNN &amp; LSTM &amp; CNN models for Sentiment Analysis from Stanford University dataset.
